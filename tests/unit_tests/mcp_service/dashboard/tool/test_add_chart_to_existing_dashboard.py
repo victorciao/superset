@@ -332,3 +332,40 @@ def test_add_chart_response_error_preserves_application_text() -> None:
         dashboard=None, dashboard_url=None, position=None, error=None
     )
     assert empty_response.error is None
+
+
+def test_emoji_pattern_ranges_are_escape_bounded() -> None:
+    """Emoji character ranges are spelled with explicit code point escapes."""
+    from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
+        _EMOJI_RE,
+    )
+
+    assert _EMOJI_RE.pattern.isascii()
+    assert "\\U0001F300-\\U0001F5FF" in _EMOJI_RE.pattern
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("\U0001f4ca Sales", "sales"),
+        ("\U0001f600 Emoticons", "emoticons"),
+        ("\U0001f680 Transport", "transport"),
+        ("\U0001f9ea Science", "science"),
+        ("\U0001fa79 Bandage", "bandage"),
+        ("\u2600 Misc", "misc"),
+        ("\u2708 Dingbat", "dingbat"),
+        ("Flag\ufe0f", "flag"),
+        ("A\u200dB", "ab"),
+        ("Plain Tab", "plain tab"),
+        # Characters just outside the configured blocks are preserved
+        ("\u25ff Edge", "\u25ff edge"),
+        ("\U0001f2ff Edge", "\U0001f2ff edge"),
+    ],
+)
+def test_normalize_tab_text_strips_emoji_blocks(raw: str, expected: str) -> None:
+    """Tab text normalization strips only the configured emoji blocks."""
+    from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
+        _normalize_tab_text,
+    )
+
+    assert _normalize_tab_text(raw) == expected

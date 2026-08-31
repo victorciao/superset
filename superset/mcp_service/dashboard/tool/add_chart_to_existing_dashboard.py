@@ -50,17 +50,19 @@ logger = logging.getLogger(__name__)
 
 # Compiled regex for stripping common emoji Unicode ranges from tab text.
 # Uses specific Unicode blocks to avoid overly permissive ranges.
+# Range bounds are written as regex escapes (raw strings) so each range is
+# unambiguous about the code points it covers.
 _EMOJI_RE = re.compile(
     "["
-    "\U0001f300-\U0001f5ff"  # Misc Symbols and Pictographs
-    "\U0001f600-\U0001f64f"  # Emoticons
-    "\U0001f680-\U0001f6ff"  # Transport and Map Symbols
-    "\U0001f900-\U0001f9ff"  # Supplemental Symbols and Pictographs
-    "\U0001fa70-\U0001faff"  # Symbols and Pictographs Extended-A
-    "\u2600-\u26ff"  # Misc Symbols
-    "\u2700-\u27bf"  # Dingbats
-    "\ufe00-\ufe0f"  # Variation Selectors
-    "\u200d"  # Zero-width joiner
+    r"\U0001F300-\U0001F5FF"  # Misc Symbols and Pictographs
+    r"\U0001F600-\U0001F64F"  # Emoticons
+    r"\U0001F680-\U0001F6FF"  # Transport and Map Symbols
+    r"\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
+    r"\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
+    r"\u2600-\u26FF"  # Misc Symbols
+    r"\u2700-\u27BF"  # Dingbats
+    r"\uFE00-\uFE0F"  # Variation Selectors
+    r"\u200D"  # Zero-width joiner
     "]+"
 )
 
