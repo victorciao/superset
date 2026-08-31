@@ -334,14 +334,30 @@ def test_add_chart_response_error_preserves_application_text() -> None:
     assert empty_response.error is None
 
 
-def test_emoji_pattern_ranges_are_escape_bounded() -> None:
-    """Emoji character ranges are spelled with explicit code point escapes."""
+def test_emoji_blocks_are_explicit_code_point_bounds() -> None:
+    """Emoji blocks match exactly their declared code point bounds."""
     from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
-        _EMOJI_RE,
+        _EMOJI_CODE_POINT_BLOCKS,
+        _is_emoji_char,
     )
 
-    assert _EMOJI_RE.pattern.isascii()
-    assert "\\U0001F300-\\U0001F5FF" in _EMOJI_RE.pattern
+    for low, high in _EMOJI_CODE_POINT_BLOCKS:
+        assert low <= high
+        assert _is_emoji_char(chr(low))
+        assert _is_emoji_char(chr(high))
+
+    # Characters immediately outside every block are not treated as emoji
+    for low, high in _EMOJI_CODE_POINT_BLOCKS:
+        if not any(
+            other_low <= low - 1 <= other_high
+            for other_low, other_high in _EMOJI_CODE_POINT_BLOCKS
+        ):
+            assert not _is_emoji_char(chr(low - 1))
+        if not any(
+            other_low <= high + 1 <= other_high
+            for other_low, other_high in _EMOJI_CODE_POINT_BLOCKS
+        ):
+            assert not _is_emoji_char(chr(high + 1))
 
 
 @pytest.mark.parametrize(

@@ -22,7 +22,6 @@ This tool adds a chart to an existing dashboard with automatic layout positionin
 """
 
 import logging
-import re
 from typing import Any, Dict
 
 from fastmcp import Context
@@ -48,22 +47,19 @@ from superset.utils import json
 
 logger = logging.getLogger(__name__)
 
-# Compiled regex for stripping common emoji Unicode ranges from tab text.
-# Uses specific Unicode blocks to avoid overly permissive ranges.
-# Range bounds are written as regex escapes (raw strings) so each range is
-# unambiguous about the code points it covers.
-_EMOJI_RE = re.compile(
-    "["
-    r"\U0001F300-\U0001F5FF"  # Misc Symbols and Pictographs
-    r"\U0001F600-\U0001F64F"  # Emoticons
-    r"\U0001F680-\U0001F6FF"  # Transport and Map Symbols
-    r"\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
-    r"\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
-    r"\u2600-\u26FF"  # Misc Symbols
-    r"\u2700-\u27BF"  # Dingbats
-    r"\uFE00-\uFE0F"  # Variation Selectors
-    r"\u200D"  # Zero-width joiner
-    "]+"
+# Inclusive code point bounds of the Unicode blocks that hold the emoji
+# characters stripped from tab text before matching.  Membership is tested
+# numerically rather than through regex character ranges.
+_EMOJI_CODE_POINT_BLOCKS: tuple[tuple[int, int], ...] = (
+    (0x1F300, 0x1F5FF),  # Misc Symbols and Pictographs
+    (0x1F600, 0x1F64F),  # Emoticons
+    (0x1F680, 0x1F6FF),  # Transport and Map Symbols
+    (0x1F900, 0x1F9FF),  # Supplemental Symbols and Pictographs
+    (0x1FA70, 0x1FAFF),  # Symbols and Pictographs Extended-A
+    (0x2600, 0x26FF),  # Misc Symbols
+    (0x2700, 0x27BF),  # Dingbats
+    (0xFE00, 0xFE0F),  # Variation Selectors
+    (0x200D, 0x200D),  # Zero-width joiner
 )
 
 
@@ -85,11 +81,17 @@ def _find_next_row_position(layout: Dict[str, Any]) -> str:
     return row_key
 
 
+def _is_emoji_char(char: str) -> bool:
+    """Return True when *char* falls inside one of the emoji blocks."""
+    code_point = ord(char)
+    return any(low <= code_point <= high for low, high in _EMOJI_CODE_POINT_BLOCKS)
+
+
 def _normalize_tab_text(text: str | None) -> str:
     """Strip emoji and extra whitespace from tab text for flexible matching."""
     if not text:
         return ""
-    cleaned = _EMOJI_RE.sub("", text)
+    cleaned = "".join(char for char in text if not _is_emoji_char(char))
     return cleaned.strip().lower()
 
 
