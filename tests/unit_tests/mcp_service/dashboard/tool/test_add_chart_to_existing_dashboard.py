@@ -332,3 +332,56 @@ def test_add_chart_response_error_preserves_application_text() -> None:
         dashboard=None, dashboard_url=None, position=None, error=None
     )
     assert empty_response.error is None
+
+
+def test_emoji_blocks_are_explicit_code_point_bounds() -> None:
+    """Emoji blocks match exactly their declared code point bounds."""
+    from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
+        _EMOJI_CODE_POINT_BLOCKS,
+        _is_emoji_char,
+    )
+
+    for low, high in _EMOJI_CODE_POINT_BLOCKS:
+        assert low <= high
+        assert _is_emoji_char(chr(low))
+        assert _is_emoji_char(chr(high))
+
+    # Characters immediately outside every block are not treated as emoji
+    for low, high in _EMOJI_CODE_POINT_BLOCKS:
+        if not any(
+            other_low <= low - 1 <= other_high
+            for other_low, other_high in _EMOJI_CODE_POINT_BLOCKS
+        ):
+            assert not _is_emoji_char(chr(low - 1))
+        if not any(
+            other_low <= high + 1 <= other_high
+            for other_low, other_high in _EMOJI_CODE_POINT_BLOCKS
+        ):
+            assert not _is_emoji_char(chr(high + 1))
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("\U0001f4ca Sales", "sales"),
+        ("\U0001f600 Emoticons", "emoticons"),
+        ("\U0001f680 Transport", "transport"),
+        ("\U0001f9ea Science", "science"),
+        ("\U0001fa79 Bandage", "bandage"),
+        ("\u2600 Misc", "misc"),
+        ("\u2708 Dingbat", "dingbat"),
+        ("Flag\ufe0f", "flag"),
+        ("A\u200dB", "ab"),
+        ("Plain Tab", "plain tab"),
+        # Characters just outside the configured blocks are preserved
+        ("\u25ff Edge", "\u25ff edge"),
+        ("\U0001f2ff Edge", "\U0001f2ff edge"),
+    ],
+)
+def test_normalize_tab_text_strips_emoji_blocks(raw: str, expected: str) -> None:
+    """Tab text normalization strips only the configured emoji blocks."""
+    from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
+        _normalize_tab_text,
+    )
+
+    assert _normalize_tab_text(raw) == expected
