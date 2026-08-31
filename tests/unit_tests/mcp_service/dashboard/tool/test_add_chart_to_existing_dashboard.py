@@ -311,6 +311,48 @@ def test_empty_target_tab_rejected_by_schema() -> None:
     assert req.target_tab is None
 
 
+def test_normalize_tab_text_strips_only_emoji_blocks() -> None:
+    """Emoji blocks are stripped while other code points survive normalization."""
+    from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
+        _normalize_tab_text,
+    )
+
+    # Characters from every declared emoji block are removed.
+    assert (
+        _normalize_tab_text(
+            "\U0001f4ca \U0001f600 \U0001f680 \U0001f9ea \U0001fa79 "
+            "\u2600 \u2714 \ufe0f \u200d Sales"
+        )
+        == "sales"
+    )
+
+    # Code points outside the declared blocks are preserved, including ones
+    # that a surrogate-pair reading of the blocks would wrongly cover.
+    for preserved in (
+        "\u4e00",  # CJK ideograph
+        "\u2800",  # Braille pattern blank
+        "\U0001f650",  # Ornamental Dingbats (between declared blocks)
+        "\U0001f700",  # Alchemical Symbols (between declared blocks)
+        "\U0002f800",  # CJK Compatibility Ideographs Supplement
+    ):
+        assert _normalize_tab_text(f"tab{preserved}") == f"tab{preserved}".lower()
+
+
+def test_match_tab_in_children_matches_emoji_tab_name() -> None:
+    """A tab whose display name carries an emoji matches its plain-text name."""
+    from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
+        _match_tab_in_children,
+    )
+
+    layout = {
+        "TAB-1": {"type": "TAB", "meta": {"text": "\U0001f4ca Sales"}},
+        "TAB-2": {"type": "TAB", "meta": {"text": "Marketing"}},
+    }
+
+    assert _match_tab_in_children(layout, ["TAB-1", "TAB-2"], "sales") == "TAB-1"
+    assert _match_tab_in_children(layout, ["TAB-1", "TAB-2"], "Missing") is None
+
+
 def test_add_chart_response_error_preserves_application_text() -> None:
     """Error fields do not add presentation markup to application text."""
     from superset.mcp_service.dashboard.schemas import AddChartToDashboardResponse
