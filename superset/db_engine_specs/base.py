@@ -1539,19 +1539,6 @@ class BaseEngineSpec:  # pylint: disable=too-many-public-methods
         return cursor_type or pa_mapped
 
     @classmethod
-    @deprecated(deprecated_in="3.0")
-    def normalize_indexes(cls, indexes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """
-        Normalizes indexes for more consistency across db engines
-
-        noop by default
-
-        :param indexes: Raw indexes as returned by SQLAlchemy
-        :return: cleaner, more aligned index definition
-        """
-        return indexes
-
-    @classmethod
     def get_table_metadata(
         cls,
         database: Database,
