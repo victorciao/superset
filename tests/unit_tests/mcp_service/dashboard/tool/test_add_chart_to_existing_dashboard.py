@@ -332,3 +332,17 @@ def test_add_chart_response_error_preserves_application_text() -> None:
         dashboard=None, dashboard_url=None, position=None, error=None
     )
     assert empty_response.error is None
+
+
+def test_normalize_tab_text_strips_only_emoji_code_points() -> None:
+    """Emoji stripping keeps every non-emoji character, including symbols."""
+    from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
+        _normalize_tab_text,
+    )
+
+    assert _normalize_tab_text("  \U0001f4ca Sales \u2600\ufe0f ") == "sales"
+    assert _normalize_tab_text("\U0001f468\u200d\U0001f4bb Devs") == "devs"
+    # Characters just outside the stripped ranges are preserved.
+    assert _normalize_tab_text("A\u25ffB\u27c0C\u2ffdD") == "a\u25ffb\u27c0c\u2ffdd"
+    assert _normalize_tab_text("Q1 / Q2 (2024) — 100%") == "q1 / q2 (2024) — 100%"
+    assert _normalize_tab_text(None) == ""
