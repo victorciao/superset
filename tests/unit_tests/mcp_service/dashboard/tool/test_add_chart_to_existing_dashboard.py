@@ -311,6 +311,21 @@ def test_empty_target_tab_rejected_by_schema() -> None:
     assert req.target_tab is None
 
 
+def test_normalize_tab_text_strips_emoji_without_overmatching() -> None:
+    """Emoji are stripped while nearby non-emoji code points survive."""
+    from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
+        _normalize_tab_text,
+    )
+
+    assert _normalize_tab_text("\U0001f4c8 Sales  ") == "sales"
+    assert _normalize_tab_text("Ops \u2699\ufe0f") == "ops"
+    assert _normalize_tab_text("Team \U0001f9d1\u200d\U0001f4bb") == "team"
+    # Code points just outside the emoji blocks must be preserved.
+    assert _normalize_tab_text("Caf\u00e9 \u25b6 Q1 \u2032") == "café ▶ q1 ′"
+    assert _normalize_tab_text("\U0001f5ff\U0001f2ff") == "\U0001f2ff"
+    assert _normalize_tab_text(None) == ""
+
+
 def test_add_chart_response_error_preserves_application_text() -> None:
     """Error fields do not add presentation markup to application text."""
     from superset.mcp_service.dashboard.schemas import AddChartToDashboardResponse
