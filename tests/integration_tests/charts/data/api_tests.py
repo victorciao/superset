@@ -1986,13 +1986,6 @@ def test_chart_data_subquery_not_allowed(
     ],
 )
 @with_feature_flags(ALLOW_ADHOC_SUBQUERY=True)
-@pytest.mark.skip(
-    reason=(
-        "TODO: Fix test to work with DuckDB example data format. "
-        "Birth names fixture conflicts with new example data structure."
-    )
-)
-@pytest.mark.usefixtures("load_birth_names_dashboard_with_slices")
 def test_chart_data_subquery_allowed(
     test_client,
     login_as_admin,
