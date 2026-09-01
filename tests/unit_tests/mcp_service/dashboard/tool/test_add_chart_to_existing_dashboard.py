@@ -338,6 +338,41 @@ def test_normalize_tab_text_strips_only_emoji_blocks() -> None:
         assert _normalize_tab_text(f"tab{preserved}") == f"tab{preserved}".lower()
 
 
+def test_emoji_code_point_ranges_are_narrow_and_surrogate_free() -> None:
+    """Emoji stripping declares tight code point ranges, not permissive ones."""
+    import ast
+    import importlib
+    import inspect
+
+    from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
+        _EMOJI_CODE_POINT_RANGES,
+    )
+
+    module = importlib.import_module(
+        "superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard"
+    )
+
+    surrogate_start, surrogate_end = 0xD800, 0xDFFF
+    for start, end in _EMOJI_CODE_POINT_RANGES:
+        assert start <= end
+        # Each range covers a single Unicode block, never a broad sweep.
+        assert end - start <= 0x3FF
+        # A range must not span the surrogate area, which is what makes an
+        # astral range ambiguous when expressed as a character class.
+        assert not (start <= surrogate_end and end >= surrogate_start)
+
+    # The ranges must be matched by code point comparison; a regex character
+    # class built from these endpoints is what the fix removed.
+    module_source = inspect.getsource(module)
+    imported = {
+        alias.name
+        for node in ast.walk(ast.parse(module_source))
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    assert "re" not in imported
+
+
 def test_match_tab_in_children_matches_emoji_tab_name() -> None:
     """A tab whose display name carries an emoji matches its plain-text name."""
     from superset.mcp_service.dashboard.tool.add_chart_to_existing_dashboard import (
