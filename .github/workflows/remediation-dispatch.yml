@@ -22,6 +22,11 @@ on:
     types: [completed]
     branches: [master]
 
+# The dispatch authenticates with REMEDIATION_DISPATCH_TOKEN against another
+# repository and reads nothing from this one, so the job needs no scopes on the
+# automatic GITHUB_TOKEN.
+permissions: {}
+
 jobs:
   dispatch:
     if: github.event.workflow_run.conclusion == 'success'
