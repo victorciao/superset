@@ -40,6 +40,7 @@ jobs:
           RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
           curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-connrefused --retry-all-errors \
             --request POST \
             --url https://api.github.com/repos/victorciao/devin-remediation-pipeline/dispatches \
             --header "Accept: application/vnd.github+json" \
